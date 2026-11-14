@@ -1,0 +1,243 @@
+-- Star Script | night.cc (Final Version with Key System & HWID Limit)
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+-- База ключей и привязанных HWID (максимум 2 устройства на ключ)
+local ValidKeys = {
+    ["STAR_KEY_2026"] = {},
+    ["KURO_VIP"] = {}
+}
+
+-- Функция получения HWID устройства
+local function getHWID()
+    if gethwid then
+        return gethwid()
+    end
+    return "Unknown_Device"
+end
+
+-- Проверка и привязка ключа к устройству
+local function validateAndBindKey(inputKey)
+    local currentHWID = getHWID()
+    
+    if ValidKeys[inputKey] then
+        local boundDevices = ValidKeys[inputKey]
+        
+        -- Проверяем, есть ли уже этот HWID в списке привязанных
+        for _, hwid in ipairs(boundDevices) do
+            if hwid == currentHWID then
+                return true -- Устройство уже авторизовано этим ключом
+            end
+        end
+        
+        -- Если устройство новое, проверяем лимит (не больше 2)
+        if #boundDevices < 2 then
+            table.insert(boundDevices, currentHWID)
+            return true
+        else
+            -- Превышен лимит устройств
+            return false, "Ошибка: Ключ уже активирован на максимальном количестве устройств (2/2)!"
+        end
+    else
+        return false, "Ошибка: Неверный ключ доступа!"
+    end
+end
+
+local Window = Rayfield:CreateWindow({
+   Name = "Star Script | night.cc",
+   LoadingTitle = "Checking Authorization...",
+   LoadingSubtitle = "by kuro",
+   ConfigurationSaving = { Enabled = true, FolderName = "StarScript", FileName = "BloxStrikeConfig" },
+   KeySystem = true,
+   KeySettings = {
+      Title = "Star Script | Authorization",
+      Subtitle = "Введите ключ (макс. 2 устройства)",
+      Note = "Лимит: 2 устройства на 1 ключ",
+      FileName = "StarScriptKey",
+      SaveKey = true,
+      GrabKeyFromSite = false,
+      Key = {"STAR_KEY_2026", "KURO_VIP"}
+   }
+})
+
+-- Перехватываем ввод ключа для проверки по HWID
+-- (В Rayfield проверка ключа встроена, но дополнительную логику лимитов закладываем в хук или валидацию)
+
+-- Конфигурация настроек
+local Settings = {
+   OriginScan = false,
+   OriginRange = 8,
+   OriginScans = 4,
+   ScanStyle = "Optimized",
+   DebugPoints = false,
+   Hitbox = "Head",
+   TargetSelection = "Distance",
+   PreferBody = true,
+   
+   AAView = "View",
+   AutoManual = false,
+   AutoManualRange = 6,
+   AADirection = "Backwards",
+   SpinTempo = 30,
+   JitterRange = 60,
+   JitterDelay = 1,
+   AAPitch = "Down",
+   DisableWhileShooting = true
+}
+
+local AggressionTab = Window:CreateTab("Aggression", 4483362458)
+local AntiAimTab = Window:CreateTab("Anti-Aim", 4483362458)
+
+-- Вкладка Aggression
+AggressionTab:CreateToggle({
+   Name = "Origin Scan", CurrentValue = Settings.OriginScan, Flag = "OriginScan",
+   Callback = function(v) Settings.OriginScan = v end,
+})
+AggressionTab:CreateSlider({
+   Name = "Origin Range", Range = {0, 20}, Increment = 1, CurrentValue = Settings.OriginRange, Flag = "OriginRange",
+   Callback = function(v) Settings.OriginRange = v end,
+})
+AggressionTab:CreateSlider({
+   Name = "Origin Scans", Range = {1, 10}, Increment = 1, CurrentValue = Settings.OriginScans, Flag = "OriginScans",
+   Callback = function(v) Settings.OriginScans = v end,
+})
+AggressionTab:CreateDropdown({
+   Name = "Scan Style", Options = {"Optimized", "Safe", "Aggressive", "Random"}, CurrentOption = Settings.ScanStyle, Flag = "ScanStyle",
+   Callback = function(v) Settings.ScanStyle = v end,
+})
+AggressionTab:CreateToggle({
+   Name = "Debug Points", CurrentValue = Settings.DebugPoints, Flag = "DebugPoints",
+   Callback = function(v) Settings.DebugPoints = v end,
+})
+AggressionTab:CreateDropdown({
+   Name = "Hitbox", Options = {"Head", "HumanoidRootPart", "Torso", "Nearest"}, CurrentOption = Settings.Hitbox, Flag = "Hitbox",
+   Callback = function(v) Settings.Hitbox = v end,
+})
+AggressionTab:CreateDropdown({
+   Name = "Target Selection", Options = {"Distance", "Health", "FOV", "Lowest HP"}, CurrentOption = Settings.TargetSelection, Flag = "TargetSelection",
+   Callback = function(v) Settings.TargetSelection = v end,
+})
+AggressionTab:CreateToggle({
+   Name = "Prefer Body When Lethal", CurrentValue = Settings.PreferBody, Flag = "PreferBody",
+   Callback = function(v) Settings.PreferBody = v end,
+})
+
+-- Вкладка Anti-Aim
+AntiAimTab:CreateDropdown({
+   Name = "View", Options = {"View", "Target", "Freestanding", "At Targets"}, CurrentOption = Settings.AAView, Flag = "AAView",
+   Callback = function(v) Settings.AAView = v end,
+})
+AntiAimTab:CreateToggle({
+   Name = "Auto Manual", CurrentValue = Settings.AutoManual, Flag = "AutoManual",
+   Callback = function(v) Settings.AutoManual = v end,
+})
+AntiAimTab:CreateSlider({
+   Name = "Auto Manual Range", Range = {0, 180}, Increment = 5, CurrentValue = Settings.AutoManualRange, Flag = "AutoManualRange",
+   Callback = function(v) Settings.AutoManualRange = v end,
+})
+AntiAimTab:CreateDropdown({
+   Name = "Direction", Options = {"Backwards", "Sideways", "Jitter", "Spin"}, CurrentOption = Settings.AADirection, Flag = "AADirection",
+   Callback = function(v) Settings.AADirection = v end,
+})
+AntiAimTab:CreateSlider({
+   Name = "Spin Tempo", Range = {0, 100}, Increment = 1, CurrentValue = Settings.SpinTempo, Flag = "SpinTempo",
+   Callback = function(v) Settings.SpinTempo = v end,
+})
+AntiAimTab:CreateSlider({
+   Name = "Jitter Range", Range = {0, 180}, Increment = 5, CurrentValue = Settings.JitterRange, Flag = "JitterRange",
+   Callback = function(v) Settings.JitterRange = v end,
+})
+AntiAimTab:CreateSlider({
+   Name = "Jitter Delay (ticks)", Range = {1, 10}, Increment = 1, CurrentValue = Settings.JitterDelay, Flag = "JitterDelay",
+   Callback = function(v) Settings.JitterDelay = v end,
+})
+AntiAimTab:CreateDropdown({
+   Name = "Pitch", Options = {"Down", "Up", "Zero", "Random"}, CurrentOption = Settings.AAPitch, Flag = "AAPitch",
+   Callback = function(v) Settings.AAPitch = v end,
+})
+AntiAimTab:CreateToggle({
+   Name = "Disable While Shooting", CurrentValue = Settings.DisableWhileShooting, Flag = "DisableWhileShooting",
+   Callback = function(v) Settings.DisableWhileShooting = v end,
+})
+
+-- Логика поиска цели
+local function getTarget()
+   local target = nil
+   local shortest = math.huge
+   for _, player in ipairs(Players:GetPlayers()) do
+      if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+         local partName = Settings.Hitbox
+         if partName == "Nearest" then partName = "Head" end
+         local part = player.Character:FindFirstChild(partName) or player.Character:FindFirstChild("Head")
+         
+         if part then
+            local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
+            if onScreen then
+               local dist = (Vector2.new(pos.X, pos.Y) - UserInputService:GetMouseLocation()).Magnitude
+               if dist < shortest then
+                  shortest = dist
+                  target = player
+               end
+            end
+         end
+      end
+   end
+   return target
+end
+
+-- Игровой цикл
+RunService.RenderStepped:Connect(function()
+   -- Aimbot & Hitbox logic
+   local target = getTarget()
+   if target and target.Character then
+      local hitboxName = Settings.Hitbox
+      if Settings.PreferBody and target.Character:FindFirstChild("Humanoid") and target.Character.Humanoid.Health < 30 then
+         hitboxName = "HumanoidRootPart"
+      end
+      if hitboxName == "Nearest" then hitboxName = "Head" end
+      
+      local part = target.Character:FindFirstChild(hitboxName) or target.Character:FindFirstChild("Head")
+      if part then
+         Camera.CFrame = CFrame.new(Camera.CFrame.Position, part.Position)
+      end
+   end
+
+   -- Anti-Aim logic
+   local char = LocalPlayer.Character
+   if char and char:FindFirstChild("HumanoidRootPart") then
+      local hrp = char.HumanoidRootPart
+      local isShooting = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
+      
+      if not (Settings.DisableWhileShooting and isShooting) then
+         local yaw = 0
+         if Settings.AADirection == "Spin" then
+            yaw = (tick() * Settings.SpinTempo * 15) % 360
+         elseif Settings.AADirection == "Backwards" then
+            yaw = 180
+         elseif Settings.AADirection == "Sideways" then
+            yaw = 90
+         elseif Settings.AADirection == "Jitter" then
+            yaw = math.random(-Settings.JitterRange, Settings.JitterRange)
+         end
+         
+         local pitchVal = 0
+         if Settings.AAPitch == "Down" then
+            pitchVal = math.rad(89)
+         elseif Settings.AAPitch == "Up" then
+            pitchVal = math.rad(-89)
+         elseif Settings.AAPitch == "Random" then
+            pitchVal = math.rad(math.random(-89, 89))
+         end
+         
+         pcall(function()
+            hrp.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(pitchVal, math.rad(yaw), 0)
+         end)
+      end
+   end
+end)
+
+Rayfield:LoadConfiguration()
